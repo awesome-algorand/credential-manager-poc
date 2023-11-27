@@ -15,7 +15,7 @@ credentials. This project is a reference for implementing a CredentialManager ap
 Install NuAuth Credential Manager on the Android 14 device and ensure that the Google Account is active on the device. 
 Also ensure the same account is used in the Google Chrome instance on the Desktop. 
 Once the accounts are active, head to https://webauthn.io and register the device. 
-During registration process it will look for registration of a phone via WebAuthn and Google caBLE. 
+During the registration process, it will look for registration of a phone via WebAuthn and Google caBLE. 
 
 If no devices have been registered it will say "Use a phone or tablet", otherwise it will be a list of devices with the option to "Use a different phone or tablet". 
 Ensure at least one Android 14 device is registered to the Google Account. 
@@ -28,3 +28,22 @@ Once the device is registered, it can be used with Google's caBLE protocol for a
 - [Migrating from FIDO2 to CredentialManager](https://developer.android.com/training/sign-in/fido2-migration)
 - [Privileged Client](https://developer.android.com/training/sign-in/privileged-apps)
 - [Well Known Url Draft](https://github.com/ms-id-standards/MSIdentityStandardsExplainers/blob/main/PasskeyEndpointsWellKnownUrl/explainer.md#example-1)
+
+## Compatibility Matrix
+
+- GPM: Google Password Manager
+- USK: USB Security Key
+
+| Operating System           | Browser | Roaming Authenticator | NuAuth Status | Verified By |
+|----------------------------|---------|-----------------------|---------------|-------------|
+| Linux (Ubuntu 20.04.3 LTS) | Chrome  | Android 14 + NuAuth   | ✅             | @PhearZero  |
+| Linux (Ubuntu 20.04.3 LTS) | Edge    | Android 14 + NuAuth   | ✅             | @PhearZero  |
+| Linux (Ubuntu 20.04.3 LTS) | Brave   | Android 14 + NuAuth   | ✅             | @PhearZero  |
+| Linux (Ubuntu 20.04.3 LTS) | Firefox | Only some USK         | ❌             | @PhearZero  |
+| Windows 11                 | Chrome  | GPM & USK             | ❌             | @PhearZero  |
+
+
+
+## Compatibility Tracking Links
+
+- [Mozilla Passkey Support](https://connect.mozilla.org/t5/ideas/support-webauthn-passkeys/idi-p/14069)
