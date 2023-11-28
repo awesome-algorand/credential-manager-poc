@@ -51,6 +51,9 @@ dependencies {
 
     implementation("androidx.credentials:credentials:1.2.0")
     implementation("androidx.credentials:credentials-play-services-auth:1.2.0")
+    implementation("androidx.annotation:annotation:1.7.0")
+    implementation("androidx.slice:slice-builders:1.0.0")
+    implementation("androidx.slice:slice-core:1.0.0")
 
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
