@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Nu Auth</title>
+    <link rel="stylesheet" href="/pico.classless.min.css">
+    <script src="https://cdn.jsdelivr.net/gh/herrjemand/Base64URL-ArrayBuffer@latest/lib/base64url-arraybuffer.js"></script>
+    <script
+            src="https://unpkg.com/algosdk@v2.7.0/dist/browser/algosdk.min.js"
+            integrity="sha384-OP8U0zDUgTdYdeyxnrhicwju6SuPxm2tx4WaTYDeP5JiMS/OyifldTK5Y3vzPK9K"
+            crossorigin="anonymous"
+    ></script>
+</head>
+<body>
+<header>
+    <h1>Nu Auth</h1>
+</header>
+<main>
+    <article>
+        <header>
+            <h1>WebAuthn</h1>
+        </header>
+<!--        <label for="username-field">Username</label>-->
+<!--        <input type="text" id="username-field" autoComplete="username webauthn"/>-->
+        <footer>
+            <button id="register">Register</button>
+            <button id="authenticate">Authenticate</button>
+        </footer>
+    </article>
+</main>
+<script type="module">
+    const encoder = new TextEncoder()
+    /**
+     * Fake Account that should be stored in the Credential Provider Service application.
+     * The public key is 6EJFSR455LWK5PAXK7OHL6M4YH536FG2IKGGR7ITHHMCQHUCU5QMDCGVN4
+     * @type {algosdk.Account}
+     */
+    const account = algosdk.mnemonicToSecretKey('critic choice identify twist grass eye actress year banner exact blade ticket attack woman engage attract outer lonely index chuckle person gun dinosaur above heavy')
+
+    /**
+     * Decode Client Data JSON
+     *
+     * @see https://developer.mozilla.org/en-US/docs/Web/API/AuthenticatorResponse/clientDataJSON#examples
+     * @param buf
+     * @return {string}
+     */
+    function decodeClientDataJSON(buf) {
+        return JSON.parse(String.fromCharCode.apply(null, new Uint8Array(buf)));
+    }
+
+    /**
+     * Get Stored Credentials
+     * @return {*[]}
+     */
+    function getStoredCredentials(){
+        let credentials = []
+        const credentialsJSON = localStorage.getItem('credentials')
+
+        if(credentialsJSON){
+            credentials = JSON.parse(credentialsJSON)
+        }
+
+        return credentials
+    }
+
+    /**
+     *
+     * @param credentials
+     */
+    function setStoredCredentials(credentials){
+        localStorage.setItem('credentials', JSON.stringify(credentials))
+    }
+
+    // Initialize local storage
+    if(!localStorage.getItem('credentials')){
+        setStoredCredentials([])
+    }
+
+    // Initial fetch of Credentials
+    const credentials = getStoredCredentials()
+
+     register.onclick = async () => {
+        let options = {
+            "challenge": base64url.decode("EL49YS6aRcydoLeVdCXYB8rwJtCQtjD2uDnqSDpzmg4"),
+            "rp": {"id": "localhost", "name": "nuauth.local", "icon": ""},
+            "user": {
+                "id": encoder.encode(account.addr),
+                "name": account.addr,
+                "displayName": "Algofam member",
+            },
+            // -8 === EdDSA
+            // see https://www.iana.org/assignments/cose/cose.xhtml#algorithms
+            "pubKeyCredParams": [{"type": "public-key", "alg": -8}],
+            "authenticatorSelection": {
+                "requireResidentKey": true,
+                "residentKey": "required"
+            },
+            // Not supported in caBLE
+            // "extensions":{
+            //     minPinLength: true
+            // }
+        }
+
+        // Register
+        console.log('PublicKeyCredentialCreate Options', options)
+        const pk = await navigator.credentials.create({publicKey: options})
+
+        // Usually send to FIDO2 Server, instead log the results for testing
+        console.log('PublicKeyCredentialCreate Result', {
+            pk,
+            decodedClientData: decodeClientDataJSON(pk.response.clientDataJSON),
+            extensions: pk.getClientExtensionResults()
+        })
+
+        // Save to local storage
+        credentials.push(pk.id)
+        setStoredCredentials(credentials)
+    }
+
+    authenticate.onclick = async () =>{
+        let options = {
+            "challenge": base64url.decode("EL49YS6aRcydoLeVdCXYB8rwJtCQtjD2uDnqSDpzmg4"),
+            "rpId": 'localhost',
+            "userVerification": "required"
+        }
+        if(credentials.length > 0 ){
+            options.allowedCredentials = credentials.map(cred=>({
+                type: 'public-key',
+                id: base64url.decode(cred)
+            }))
+        }
+        console.log('PublicKeyCredentialGet Options', options)
+        const pk = await navigator.credentials.get({publicKey: options})
+        console.log('PublicKeyCredentialGet Result', {
+            pk,
+            decodedClientData: decodeClientDataJSON(pk.response.clientDataJSON),
+            extensions: pk.getClientExtensionResults()
+        })
+    }
+</script>
+</body>
+</html>
