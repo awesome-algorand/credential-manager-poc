@@ -123,12 +123,12 @@
             "rpId": 'localhost',
             "userVerification": "required"
         }
-        if(credentials.length > 0 ){
-            options.allowedCredentials = credentials.map(cred=>({
-                type: 'public-key',
-                id: base64url.decode(cred)
-            }))
-        }
+        // if(credentials.length > 0 ){
+        //     options.allowedCredentials = credentials.map(cred=>({
+        //         type: 'public-key',
+        //         id: base64url.decode(cred)
+        //     }))
+        // }
         console.log('PublicKeyCredentialGet Options', options)
         const pk = await navigator.credentials.get({publicKey: options})
         console.log('PublicKeyCredentialGet Result', {
