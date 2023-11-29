@@ -15,15 +15,16 @@ import androidx.credentials.webauthn.PublicKeyCredentialRequestOptions
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import foundation.algorand.nuauth.credential.CredentialRepository
 import org.json.JSONObject
 import java.security.KeyPairGenerator
-import java.security.MessageDigest
 import java.security.Signature
 import java.security.spec.ECGenParameterSpec
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 
 class GetPasskeyViewModel: ViewModel() {
+    private val credentialRepository = CredentialRepository()
     companion object {
         const val TAG = "GetPasskeyViewModel"
     }
@@ -76,12 +77,12 @@ class GetPasskeyViewModel: ViewModel() {
         val requestOptions = PublicKeyCredentialRequestOptions(option.requestJson)
 //        val credIdEnc = requestInfo!!.getString("credId")
         val credId = Base64.decode("BqvEZnea9fYG9xHPeeiAag")
-        val origin = appInfoToOrigin(request.callingAppInfo)
+        val origin = credentialRepository.appInfoToOrigin(request.callingAppInfo)
         Log.d(TAG, origin)
         val response = AuthenticatorAssertionResponse(
             requestOptions = requestOptions,
             credentialId = credId,
-            origin = appInfoToOrigin(request.callingAppInfo),
+            origin = credentialRepository.appInfoToOrigin(request.callingAppInfo),
             up = true,
             uv = true,
             be = true,
@@ -111,12 +112,5 @@ class GetPasskeyViewModel: ViewModel() {
         )
         return result
     }
-    @OptIn(ExperimentalEncodingApi::class)
-    fun appInfoToOrigin(info: CallingAppInfo): String {
-        val cert = info.signingInfo.apkContentsSigners[0].toByteArray()
-        val md = MessageDigest.getInstance("SHA-256");
-        val certHash = md.digest(cert)
-        // This is the format for origin
-        return "android:apk-key-hash:${Base64.encode(certHash)}"
-    }
+
 }
