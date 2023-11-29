@@ -1,5 +1,7 @@
 import {createServer} from 'node:http'
 
+// TODO: Investigate the PasskeyEndpointsWellKnownUrl
+// https://github.com/ms-id-standards/MSIdentityStandardsExplainers/blob/main/PasskeyEndpointsWellKnownUrl/explainer.md#example-1
 createServer((req, res)=>{
     res.write(JSON.stringify([
                                {

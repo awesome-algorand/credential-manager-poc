@@ -3,9 +3,9 @@ package foundation.algorand.nuauth.services
 import android.app.PendingIntent
 import android.content.Intent
 import android.graphics.drawable.Icon
+import android.os.Bundle
 import android.os.OutcomeReceiver
 import android.os.CancellationSignal
-import android.provider.ContactsContract.Directory.PACKAGE_NAME
 import android.util.Log
 import androidx.credentials.exceptions.ClearCredentialException
 import androidx.credentials.exceptions.CreateCredentialException
@@ -23,14 +23,17 @@ import androidx.credentials.provider.CredentialProviderService
 import androidx.credentials.provider.ProviderClearCredentialStateRequest
 import androidx.credentials.provider.PublicKeyCredentialEntry
 import foundation.algorand.nuauth.R
+import org.json.JSONObject
 
 class NuAuthProviderService: CredentialProviderService() {
     companion object {
-        const val PASSKEY_ID = "Algorand Wallet"
         const val FAKE_USERNAME = "bob"
         const val TAG = "NuAuthProviderService"
-        const val GET_PASSKEY_INTENT = 5
-        const val CREATE_PASSKEY_INTENT = 6
+        //TODO: App Lock Intents
+        const val GET_PASSKEY_INTENT = 1
+        const val CREATE_PASSKEY_INTENT = 2
+        const val GET_PASSKEY_ACTION = "foundation.algorand.nuauth.GET_PASSKEY"
+        const val CREATE_PASSKEY_ACTION = "foundation.algorand.nuauth.CREATE_PASSKEY"
     }
 
     /**
@@ -62,16 +65,24 @@ class NuAuthProviderService: CredentialProviderService() {
     }
 
     /**
-     * Create a new PassKey
+     * Create a new PassKey Entry
+     *
+     * This returns an Entry list for the user to interact with.
+     * A PendingIntent must be configured to receive the data from the WebAuthn client
      */
     private fun handleCreatePasskeyQuery(
         request: BeginCreatePublicKeyCredentialRequest
     ): BeginCreateCredentialResponse {
-        Log.d(TAG, request.toString())
+        Log.d(TAG, request.requestJson)
+
+
         val createEntries: MutableList<CreateEntry> = mutableListOf()
+        val name =  JSONObject(request.requestJson).getJSONObject("user").get("name").toString()
+
         createEntries.add( CreateEntry(
-            PASSKEY_ID,
-            createNewPendingIntent(PASSKEY_ID, CREATE_PASSKEY_INTENT)
+            name,
+            //TODO: Dive deeper into CREATE_PASSKEY_ACTION Intent errors, for now DO_NOTHING
+            createNewPendingIntent("foundation.algorand.nuauth.DO_NOTHING", CREATE_PASSKEY_INTENT, null)
         )
         )
         return BeginCreateCredentialResponse(createEntries)
@@ -96,12 +107,13 @@ class NuAuthProviderService: CredentialProviderService() {
      */
     private fun processGetCredentialRequest(request: BeginGetCredentialRequest): BeginGetCredentialResponse{
         Log.v(TAG, "processing GetCredentialRequest")
-
+        val data = Bundle()
+        data.putString("credId", "c0zfeC3NVA4Nh3tq79k8Ow")
         // TODO: Manage PublicKeyCredentials in a secure storage
         val fakeKey = PublicKeyCredentialEntry.Builder(
             this@NuAuthProviderService,
             FAKE_USERNAME,
-            createNewPendingIntent(FAKE_USERNAME, GET_PASSKEY_INTENT),
+            createNewPendingIntent(GET_PASSKEY_ACTION, GET_PASSKEY_INTENT, data),
             // TODO: filter the request for PublicKeyCredentialOptions
             request.beginGetCredentialOptions[0] as BeginGetPublicKeyCredentialOption
         )
@@ -120,11 +132,14 @@ class NuAuthProviderService: CredentialProviderService() {
         TODO("Not yet implemented")
     }
 
-    private fun createNewPendingIntent(action: String, requestCode: Int): PendingIntent{
-        val intent = Intent(action).setPackage(PACKAGE_NAME)
+    private fun createNewPendingIntent(action: String, requestCode: Int, extra: Bundle?): PendingIntent{
+        val intent = Intent(action).setPackage("foundation.algorand.nuauth")
+        if (extra != null) {
+            intent.putExtra("CREDENTIAL_DATA", extra)
+        }
         return PendingIntent.getActivity(
             applicationContext, requestCode,
-            intent, PendingIntent.FLAG_IMMUTABLE
+            intent, (PendingIntent.FLAG_MUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
         )
     }
 }
