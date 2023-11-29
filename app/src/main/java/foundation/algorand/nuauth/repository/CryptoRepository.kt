@@ -6,7 +6,7 @@ import androidx.fragment.app.Fragment
 import com.algorand.algosdk.account.Account
 import com.algorand.algosdk.mnemonic.Mnemonic
 import com.algorand.algosdk.util.CryptoProvider
-import foundation.algorand.nuauth.AuthProviderActivity
+import foundation.algorand.nuauth.CreatePasskeyActivity
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 import java.security.*
 
@@ -43,11 +43,11 @@ class Repository: CryptoRepository {
 
         if (Security.getProvider(providerName) == null)
         {
-            Log.d(AuthProviderActivity.TAG,providerName + " provider not installed")
+            Log.d(CreatePasskeyActivity.TAG,providerName + " provider not installed")
         }
         else
         {
-            Log.d(AuthProviderActivity.TAG,providerName + " is installed.")
+            Log.d(CreatePasskeyActivity.TAG,providerName + " is installed.")
         }
     }
     @Throws(NoSuchAlgorithmException::class)

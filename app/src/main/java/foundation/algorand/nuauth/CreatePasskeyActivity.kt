@@ -1,6 +1,5 @@
 package foundation.algorand.nuauth
 
-import android.app.Activity
 import android.content.Intent
 import androidx.biometric.BiometricPrompt
 import android.os.Bundle
@@ -16,7 +15,6 @@ import androidx.credentials.provider.PendingIntentHandler
 import androidx.credentials.webauthn.AuthenticatorAttestationResponse
 import androidx.credentials.webauthn.FidoPublicKeyCredential
 import androidx.credentials.webauthn.PublicKeyCredentialCreationOptions
-import org.bouncycastle.jce.provider.BouncyCastleProvider
 import java.security.*
 import java.security.spec.ECGenParameterSpec
 import java.util.concurrent.Executor
@@ -32,33 +30,16 @@ import kotlin.io.encoding.ExperimentalEncodingApi
  * @see <a href="https://developer.android.com/training/sign-in/credential-provider#handle-passkey-credential">Handle Passkey Credential</a>
  * @see <a href="https://developer.android.com/training/sign-in/credential-provider#passkeys-implement">Implement Passkey Credential</a>
  */
-class AuthProviderActivity : AppCompatActivity() {
+class CreatePasskeyActivity : AppCompatActivity() {
     companion object {
         const val TAG = "AuthProviderActivity"
     }
-    /**
-     * Update security provider for Algorand SDK
-     */
-    private fun setSecurity(){
-        val providerName = "BC"
-        Security.removeProvider("BC")
-        Security.insertProviderAt(BouncyCastleProvider(), 0)
 
-        if (Security.getProvider(providerName) == null)
-        {
-            Log.d(TAG,providerName + " provider not installed")
-        }
-        else
-        {
-            Log.d(TAG,providerName + " is installed.")
-        }
-    }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setSecurity()
-        setContentView(R.layout.activity_auth_provider)
-        Log.d(TAG, "onCreate")
-        Log.d(TAG, intent.toString())
+        setContentView(R.layout.activity_create_passkey)
+        Log.d(TAG, "onCreate($intent)")
+
         val beginRequest =
             PendingIntentHandler.retrieveBeginGetCredentialRequest(intent)
         Log.d(TAG, beginRequest.toString())
@@ -116,7 +97,6 @@ class AuthProviderActivity : AppCompatActivity() {
                 result: BiometricPrompt.AuthenticationResult
             ) {
                 super.onAuthenticationSucceeded(result)
-                setSecurity()
                 // Generate a credentialId
                 val credentialId = ByteArray(32)
                 SecureRandom().nextBytes(credentialId)
@@ -136,7 +116,7 @@ class AuthProviderActivity : AppCompatActivity() {
                     requestOptions = request,
                     credentialId = credentialId,
                     credentialPublicKey = keyPair.public.encoded,
-                    origin = callingAppInfo!!.origin.toString(),
+                    origin = getAppOrigin(callingAppInfo!!),
                     up = true,
                     uv = true,
                     be = true,
@@ -146,7 +126,8 @@ class AuthProviderActivity : AppCompatActivity() {
                 val credential = FidoPublicKeyCredential(
                     rawId = credentialId, response = response, authenticatorAttachment = "platform"
                 )
-                val intent = Intent()
+
+                val intent = Intent("foundation.algorand.nuauth.GET_PASSKEY_ACTION")
 
                 val createPublicKeyCredResponse =
                     CreatePublicKeyCredentialResponse(credential.json())
@@ -155,8 +136,8 @@ class AuthProviderActivity : AppCompatActivity() {
                 PendingIntentHandler.setCreateCredentialResponse(
                     intent, createPublicKeyCredResponse
                 )
-                setResult(Activity.RESULT_OK, intent)
-                finish()
+//                setResult(Activity.RESULT_OK, intent)
+//                finish()
             }
         }
         )
@@ -174,8 +155,9 @@ class AuthProviderActivity : AppCompatActivity() {
     }
 
     @OptIn(ExperimentalEncodingApi::class)
-    fun getAppOrigin(): String {
-        val cert = "C7:87:AC:46:8B:A2:84:2E:04:FD:C7:B5:EB:C5:35:BC:EA:9C:98:9D:3D:4D:D4:89:48:27:BC:10:BD:6E:3D:99".toByteArray()
+    fun getAppOrigin(info: CallingAppInfo): String {
+        val cert = info.signingInfo.apkContentsSigners[0].toByteArray()
+//        val cert = "C7:87:AC:46:8B:A2:84:2E:04:FD:C7:B5:EB:C5:35:BC:EA:9C:98:9D:3D:4D:D4:89:48:27:BC:10:BD:6E:3D:99".toByteArray()
         val md = MessageDigest.getInstance("SHA-256")
         val certHash = md.digest(cert)
         // This is the format for origin

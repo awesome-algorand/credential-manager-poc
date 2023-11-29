@@ -3,6 +3,7 @@ package foundation.algorand.nuauth.services
 import android.app.PendingIntent
 import android.content.Intent
 import android.graphics.drawable.Icon
+import android.os.Bundle
 import android.os.OutcomeReceiver
 import android.os.CancellationSignal
 import android.util.Log
@@ -81,7 +82,7 @@ class NuAuthProviderService: CredentialProviderService() {
         createEntries.add( CreateEntry(
             name,
             //TODO: Dive deeper into CREATE_PASSKEY_ACTION Intent errors, for now DO_NOTHING
-            createNewPendingIntent("foundation.algorand.nuauth.DO_NOTHING", CREATE_PASSKEY_INTENT)
+            createNewPendingIntent("foundation.algorand.nuauth.DO_NOTHING", CREATE_PASSKEY_INTENT, null)
         )
         )
         return BeginCreateCredentialResponse(createEntries)
@@ -106,12 +107,13 @@ class NuAuthProviderService: CredentialProviderService() {
      */
     private fun processGetCredentialRequest(request: BeginGetCredentialRequest): BeginGetCredentialResponse{
         Log.v(TAG, "processing GetCredentialRequest")
-
+        val data = Bundle()
+        data.putString("credId", "c0zfeC3NVA4Nh3tq79k8Ow")
         // TODO: Manage PublicKeyCredentials in a secure storage
         val fakeKey = PublicKeyCredentialEntry.Builder(
             this@NuAuthProviderService,
             FAKE_USERNAME,
-            createNewPendingIntent(GET_PASSKEY_ACTION, GET_PASSKEY_INTENT),
+            createNewPendingIntent(GET_PASSKEY_ACTION, GET_PASSKEY_INTENT, data),
             // TODO: filter the request for PublicKeyCredentialOptions
             request.beginGetCredentialOptions[0] as BeginGetPublicKeyCredentialOption
         )
@@ -130,8 +132,11 @@ class NuAuthProviderService: CredentialProviderService() {
         TODO("Not yet implemented")
     }
 
-    private fun createNewPendingIntent(action: String, requestCode: Int): PendingIntent{
+    private fun createNewPendingIntent(action: String, requestCode: Int, extra: Bundle?): PendingIntent{
         val intent = Intent(action).setPackage("foundation.algorand.nuauth")
+        if (extra != null) {
+            intent.putExtra("CREDENTIAL_DATA", extra)
+        }
         return PendingIntent.getActivity(
             applicationContext, requestCode,
             intent, (PendingIntent.FLAG_MUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)

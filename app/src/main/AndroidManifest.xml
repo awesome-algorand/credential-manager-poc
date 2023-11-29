@@ -1,39 +1,36 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <uses-permission android:name="android.permission.USE_BIOMETRIC"
-                     android:requiredFeature="false"/>
+
+    <uses-permission
+            android:name="android.permission.USE_BIOMETRIC"
+            android:requiredFeature="false"/>
 
     <application
             android:allowBackup="true"
             android:dataExtractionRules="@xml/data_extraction_rules"
+            android:enableOnBackInvokedCallback="true"
             android:fullBackupContent="@xml/backup_rules"
             android:icon="@mipmap/ic_launcher"
             android:label="@string/app_name"
             android:roundIcon="@mipmap/ic_launcher"
             android:supportsRtl="true"
-            android:theme="@style/Theme.NuAuth"
-            android:enableOnBackInvokedCallback="true"
-    >
-
+            android:theme="@style/Theme.NuAuth">
         <activity
-                android:name=".AuthProviderActivity"
-                android:exported="false"
+                android:name=".GetPasskeyActivity"
                 android:excludeFromRecents="true"
-                android:launchMode="singleInstance"
-        >
+                android:exported="false">
             <intent-filter>
-
-                <action
-                        android:name="foundation.algorand.nuauth.CREATE_PASSKEY" />
-
-                <action
-                        android:name="foundation.algorand.nuauth.GET_PASSKEY" />
-
-                <action
-                        android:name="foundation.algorand.nuauth.BEGIN_GET_CREDENTIAL" />
-
-                <category
-                        android:name="android.intent.category.DEFAULT" />
+                <action android:name="foundation.algorand.nuauth.GET_PASSKEY"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+            </intent-filter>
+        </activity>
+        <activity
+                android:name=".CreatePasskeyActivity"
+                android:excludeFromRecents="true"
+                android:exported="false">
+            <intent-filter>
+                <action android:name="foundation.algorand.nuauth.CREATE_PASSKEY"/>
+                <category android:name="android.intent.category.DEFAULT"/>
             </intent-filter>
         </activity>
 
@@ -58,7 +55,6 @@
                 android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
-
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>

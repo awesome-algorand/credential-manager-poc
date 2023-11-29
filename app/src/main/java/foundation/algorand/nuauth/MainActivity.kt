@@ -1,15 +1,11 @@
 package foundation.algorand.nuauth
 
+import android.content.Context
 import android.os.Bundle
 import android.util.Log
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import androidx.appcompat.app.AppCompatActivity
-import androidx.credentials.CredentialManager
-import androidx.credentials.GetCredentialRequest
-import androidx.credentials.GetCredentialResponse
-import androidx.credentials.GetPasswordOption
-import androidx.credentials.GetPublicKeyCredentialOption
-import androidx.credentials.PublicKeyCredential
+import androidx.credentials.*
 import androidx.credentials.exceptions.GetCredentialException
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.findNavController
@@ -17,6 +13,7 @@ import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.setupActionBarWithNavController
 import androidx.navigation.ui.setupWithNavController
 import foundation.algorand.nuauth.databinding.ActivityMainBinding
+import foundation.algorand.nuauth.services.NuAuthProviderService
 import kotlinx.coroutines.launch
 import org.json.JSONObject
 
@@ -45,8 +42,12 @@ class MainActivity : AppCompatActivity() {
         setupActionBarWithNavController(navController, appBarConfiguration)
         navView.setupWithNavController(navController)
 //        loginCredentialManager()
+        val credMan = CredentialManager.create(this@MainActivity)
+        val service = getSystemService(Context.CREDENTIAL_SERVICE)
+        Log.d(TAG, service.toString())
+        val pendIntent = credMan.createSettingsPendingIntent()
+        pendIntent.send()
     }
-
     fun loginCredentialManager(){
         val credentialManager = CredentialManager.create(this@MainActivity)
         // Retrieves the user's saved password for your app from their
