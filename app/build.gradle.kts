@@ -6,7 +6,11 @@ plugins {
 android {
     namespace = "foundation.algorand.nuauth"
     compileSdk = 34
-
+    configurations {
+        all {
+            exclude("org.bouncycastle", "bcprov-jdk15to18")
+        }
+    }
     defaultConfig {
         applicationId = "foundation.algorand.nuauth"
         minSdk = 34
@@ -39,7 +43,8 @@ android {
 }
 
 dependencies {
-
+    implementation("org.bouncycastle:bcprov-jdk15on:1.67")
+    implementation("com.algorand:algosdk:2.4.0")
     implementation("androidx.core:core-ktx:1.12.0")
     implementation("androidx.appcompat:appcompat:1.6.1")
     implementation("com.google.android.material:material:1.10.0")
@@ -54,6 +59,7 @@ dependencies {
     implementation("androidx.annotation:annotation:1.7.0")
     implementation("androidx.slice:slice-builders:1.0.0")
     implementation("androidx.slice:slice-core:1.0.0")
+    implementation("androidx.biometric:biometric-ktx:1.2.0-alpha05")
 
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
