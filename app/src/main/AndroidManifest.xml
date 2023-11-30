@@ -16,11 +16,21 @@
             android:supportsRtl="true"
             android:theme="@style/Theme.NuAuth">
         <activity
+                android:name=".BeginGetPasskeyActivity"
+                android:excludeFromRecents="true"
+                android:exported="false">
+            <intent-filter>
+                <action android:name="foundation.algorand.nuauth.BEGIN_GET_PASSKEY"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+            </intent-filter>
+        </activity>
+        <activity
                 android:name=".GetPasskeyActivity"
                 android:excludeFromRecents="true"
                 android:exported="false">
             <intent-filter>
                 <action android:name="foundation.algorand.nuauth.GET_PASSKEY"/>
+
                 <category android:name="android.intent.category.DEFAULT"/>
             </intent-filter>
         </activity>
@@ -30,6 +40,7 @@
                 android:exported="false">
             <intent-filter>
                 <action android:name="foundation.algorand.nuauth.CREATE_PASSKEY"/>
+
                 <category android:name="android.intent.category.DEFAULT"/>
             </intent-filter>
         </activity>
@@ -55,6 +66,7 @@
                 android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
+
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
