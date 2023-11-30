@@ -81,8 +81,7 @@ class NuAuthProviderService: CredentialProviderService() {
 
         createEntries.add( CreateEntry(
             name,
-            //TODO: Dive deeper into CREATE_PASSKEY_ACTION Intent errors, for now DO_NOTHING
-            createNewPendingIntent("foundation.algorand.nuauth.DO_NOTHING", CREATE_PASSKEY_INTENT, null)
+            createNewPendingIntent(CREATE_PASSKEY_ACTION, CREATE_PASSKEY_INTENT, null)
         )
         )
         return BeginCreateCredentialResponse(createEntries)
