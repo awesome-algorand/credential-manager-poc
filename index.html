@@ -90,7 +90,7 @@
             },
             // -8 === EdDSA
             // see https://www.iana.org/assignments/cose/cose.xhtml#algorithms
-            "pubKeyCredParams": [{"type": "public-key", "alg": -8}],
+            "pubKeyCredParams": [{"type": "public-key", "alg": -8},{"type": "public-key", "alg": -7}, {"type": "public-key","alg": -257}],
             "authenticatorSelection": {
                 "requireResidentKey": true,
                 "residentKey": "required"
