@@ -1,5 +1,6 @@
 package foundation.algorand.nuauth
 
+import android.annotation.SuppressLint
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
@@ -70,6 +71,7 @@ class GetPasskeyViewModel: ViewModel() {
         return handleGetPasskey(request, requestInfo)
     }
 
+    @SuppressLint("RestrictedApi")
     @OptIn(ExperimentalEncodingApi::class)
     private fun handleGetPasskey(request: ProviderGetCredentialRequest, requestInfo: Bundle?): Intent{
         Log.d(TAG, "handleGetPasskey($request, $requestInfo)")
