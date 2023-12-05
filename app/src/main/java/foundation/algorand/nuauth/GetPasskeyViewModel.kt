@@ -3,8 +3,10 @@ package foundation.algorand.nuauth
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
+import androidx.annotation.RequiresApi
 import androidx.credentials.GetCredentialResponse
 import androidx.credentials.GetPublicKeyCredentialOption
 import androidx.credentials.PublicKeyCredential
@@ -54,6 +56,7 @@ class GetPasskeyViewModel: ViewModel() {
     fun setCallingAppPackage(name: String){
         _callingApp.value = name
     }
+    @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
     fun processGetPasskey(context: Context, request: ProviderGetCredentialRequest, requestInfo: Bundle?): Intent{
         Log.d(TAG, "processGetPasskey($request)")
 
@@ -71,6 +74,7 @@ class GetPasskeyViewModel: ViewModel() {
     }
     @SuppressLint("RestrictedApi")
     @OptIn(ExperimentalEncodingApi::class)
+    @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
     private fun handleGetPasskey(context: Context, request: ProviderGetCredentialRequest, requestInfo: Bundle?): Intent{
         Log.d(TAG, "handleGetPasskey($request, $requestInfo)")
         val option = request.credentialOptions[0] as GetPublicKeyCredentialOption

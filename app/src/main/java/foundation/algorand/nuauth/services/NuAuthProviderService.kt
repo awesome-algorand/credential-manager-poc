@@ -30,6 +30,7 @@ import foundation.algorand.nuauth.credential.db.Credential
 import kotlinx.coroutines.*
 import org.json.JSONObject
 
+@RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
 class NuAuthProviderService: CredentialProviderService() {
     private val credentialRepository = CredentialRepository()
     private val job = SupervisorJob()

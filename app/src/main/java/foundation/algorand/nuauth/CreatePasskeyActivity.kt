@@ -1,9 +1,11 @@
 package foundation.algorand.nuauth
 
 import android.app.Activity
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.viewModels
+import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.credentials.CreatePublicKeyCredentialRequest
 import androidx.credentials.provider.PendingIntentHandler
@@ -25,6 +27,7 @@ class CreatePasskeyActivity : AppCompatActivity() {
         const val TAG = "CreatePasskeyActivity"
     }
 
+    @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Log.d(TAG, "onCreate($intent)")

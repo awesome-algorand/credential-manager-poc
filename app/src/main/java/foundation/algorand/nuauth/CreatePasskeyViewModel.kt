@@ -3,7 +3,9 @@ package foundation.algorand.nuauth
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.util.Log
+import androidx.annotation.RequiresApi
 import androidx.credentials.CreatePublicKeyCredentialRequest
 import androidx.credentials.CreatePublicKeyCredentialResponse
 import androidx.credentials.provider.PendingIntentHandler
@@ -59,6 +61,7 @@ class CreatePasskeyViewModel(): ViewModel() {
     /**
      * Handle state and dispatch handlers
      */
+    @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
     fun processCreatePasskey(context: Context, request: ProviderCreateCredentialRequest): Intent{
         val publicKeyRequest: CreatePublicKeyCredentialRequest =
             request.callingRequest as CreatePublicKeyCredentialRequest
@@ -104,6 +107,7 @@ class CreatePasskeyViewModel(): ViewModel() {
     }
     @SuppressLint("RestrictedApi")
     @OptIn(ExperimentalEncodingApi::class)
+    @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
     private fun handleCreatePasskey(context: Context, request: ProviderCreateCredentialRequest): Intent {
         Log.d(TAG, "handleCreatePasskey($context, $request)")
         val publicKeyRequest: CreatePublicKeyCredentialRequest =
