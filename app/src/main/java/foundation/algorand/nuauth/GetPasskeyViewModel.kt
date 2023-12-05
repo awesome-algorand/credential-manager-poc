@@ -1,13 +1,13 @@
 package foundation.algorand.nuauth
 
 import android.annotation.SuppressLint
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import androidx.credentials.GetCredentialResponse
 import androidx.credentials.GetPublicKeyCredentialOption
 import androidx.credentials.PublicKeyCredential
-import androidx.credentials.provider.CallingAppInfo
 import androidx.credentials.provider.PendingIntentHandler
 import androidx.credentials.provider.ProviderGetCredentialRequest
 import androidx.credentials.webauthn.AuthenticatorAssertionResponse
@@ -18,9 +18,8 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import foundation.algorand.nuauth.credential.CredentialRepository
 import org.json.JSONObject
-import java.security.KeyPairGenerator
-import java.security.Signature
-import java.security.spec.ECGenParameterSpec
+import java.security.*
+import java.security.interfaces.ECPrivateKey
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 
@@ -55,7 +54,7 @@ class GetPasskeyViewModel: ViewModel() {
     fun setCallingAppPackage(name: String){
         _callingApp.value = name
     }
-    fun processGetPasskey(request: ProviderGetCredentialRequest, requestInfo: Bundle?): Intent{
+    fun processGetPasskey(context: Context, request: ProviderGetCredentialRequest, requestInfo: Bundle?): Intent{
         Log.d(TAG, "processGetPasskey($request)")
 
         // Set Origin
@@ -68,17 +67,19 @@ class GetPasskeyViewModel: ViewModel() {
         // Set Request JSON, TODO: Handle multiple options
         val option = request.credentialOptions[0] as GetPublicKeyCredentialOption
         setRequestJson(option.requestJson)
-        return handleGetPasskey(request, requestInfo)
+        return handleGetPasskey(context, request, requestInfo)
     }
-
     @SuppressLint("RestrictedApi")
     @OptIn(ExperimentalEncodingApi::class)
-    private fun handleGetPasskey(request: ProviderGetCredentialRequest, requestInfo: Bundle?): Intent{
+    private fun handleGetPasskey(context: Context, request: ProviderGetCredentialRequest, requestInfo: Bundle?): Intent{
         Log.d(TAG, "handleGetPasskey($request, $requestInfo)")
         val option = request.credentialOptions[0] as GetPublicKeyCredentialOption
         val requestOptions = PublicKeyCredentialRequestOptions(option.requestJson)
-//        val credIdEnc = requestInfo!!.getString("credId")
-        val credId = Base64.decode("BqvEZnea9fYG9xHPeeiAag")
+        val credIdEnc = requestInfo!!.getString("credentialId")
+        val credId = Base64.decode(credIdEnc!!)
+        //  val clientDataHash = option.requestData.getByteArray("androidx.credentials.BUNDLE_KEY_CLIENT_DATA_HASH")
+        val packageName = request.callingAppInfo.packageName
+        val userHandle = requestInfo.getString("userHandle")
         val origin = credentialRepository.appInfoToOrigin(request.callingAppInfo)
         Log.d(TAG, origin)
         val response = AuthenticatorAssertionResponse(
@@ -89,22 +90,20 @@ class GetPasskeyViewModel: ViewModel() {
             uv = true,
             be = true,
             bs = true,
-            userHandle = "es256".toByteArray(),
-            packageName = "com.google.android.gms"
+            userHandle = userHandle!!.toByteArray(),
+            packageName = packageName,
+            // clientDataHash = clientDataHash!!
         )
-        Log.d(TAG, response.toString())
-        val spec = ECGenParameterSpec("secp256r1")
-        val keyPairGen = KeyPairGenerator.getInstance("EC");
-        keyPairGen.initialize(spec)
-        val keyPair = keyPairGen.genKeyPair()
+        val keyPair = credentialRepository.getKeyPair(context, credId)
 
-        val sig = Signature.getInstance("SHA256withECDSA");
-        sig.initSign(keyPair.private)
+        //TODO: Fix signature issues
+        val sig = Signature.getInstance("SHA256withECDSA")
+        sig.initSign(keyPair.private as ECPrivateKey )
         sig.update(response.dataToSign())
         response.signature = sig.sign()
 
         val credential = FidoPublicKeyCredential(
-            rawId = credId, response = response, authenticatorAttachment = "cross-platform"
+            rawId = credId, response = response, authenticatorAttachment = "platform"
         )
         Log.d(TAG, credential.toString())
         val result = Intent()

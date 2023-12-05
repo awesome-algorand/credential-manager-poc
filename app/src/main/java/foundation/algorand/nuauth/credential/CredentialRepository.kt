@@ -1,79 +1,87 @@
 package foundation.algorand.nuauth.credential
 
 import android.content.Context
+import android.security.keystore.KeyProperties
 import android.util.Log
 import androidx.credentials.provider.CallingAppInfo
-import androidx.fragment.app.Fragment
+import foundation.algorand.nuauth.credential.db.Credential
+import foundation.algorand.nuauth.credential.db.CredentialDatabase
 import java.security.*
-import java.security.spec.ECGenParameterSpec
-import java.security.spec.PKCS8EncodedKeySpec
-import java.security.spec.X509EncodedKeySpec
+import java.security.spec.*
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 
+
 interface CredentialRepository {
-    fun getKeyPair(): KeyPair
+    val keyStore: KeyStore
+    var db: CredentialDatabase
+    suspend fun saveCredential(context: Context, credential: Credential)
+    fun getDatabase(context: Context): CredentialDatabase
+    fun generateCredentialId(): ByteArray
     fun getKeyPair(context: Context): KeyPair
-    fun getKeyPair(fragment: Fragment): KeyPair
-    fun getKeyPair(publicKey: String, privateKey: String): KeyPair
+    fun getKeyPair(context: Context, credentialId: ByteArray): KeyPair
     fun appInfoToOrigin(info: CallingAppInfo): String
 }
 fun CredentialRepository(): CredentialRepository = Repository()
-class Repository: CredentialRepository {
+class Repository(): CredentialRepository {
+    override var keyStore: KeyStore = KeyStore.getInstance("AndroidKeyStore")
+    private var generator: KeyPairGenerator = KeyPairGenerator.getInstance(KeyProperties.KEY_ALGORITHM_EC)
+    override lateinit var db: CredentialDatabase
+    init {
+        keyStore.load(null)
+    }
     companion object {
         const val TAG = "CredentialRepository"
-        const val SHARED_PREFERENCE = "credential"
-        const val CREDENTIAL_PREFERENCE_PUBLICKEY = "public"
-        const val CREDENTIAL_PREFERENCE_PRIVATEKEY = "private"
-        const val KEY_ALGO = "EC"
     }
-
-    private var generator: KeyPairGenerator = KeyPairGenerator.getInstance(KEY_ALGO)
-
-    override fun getKeyPair(): KeyPair {
-        Log.d(TAG, "getKeyPair()")
+    override suspend fun saveCredential(context: Context, credential: Credential) {
+        Log.d(TAG, "saveCredential($credential)")
+        getDatabase(context)
+        db.credentialDao().insertAll(credential)
+    }
+    override fun getDatabase(context: Context): CredentialDatabase {
+        Log.d(TAG, "getDatabase($context)")
+        if(!::db.isInitialized) {
+            db = CredentialDatabase.getInstance(context)
+        }
+        return db
+    }
+    override fun generateCredentialId(): ByteArray {
+        Log.d(TAG, "generateCredentialId()")
+        val credentialId = ByteArray(32)
+        SecureRandom().nextBytes(credentialId)
+        return credentialId
+    }
+    @OptIn(ExperimentalEncodingApi::class)
+    fun getKeyPairFromDatabase(context: Context, credentialId: ByteArray): KeyPair? {
+        Log.d(TAG, "getKeyPairFromDatabase()")
+        getDatabase(context)
+        val credential = db.credentialDao().findById(Base64.encode(credentialId))
+        if (credential != null) {
+            val publicKeyBytes = Base64.decode(credential.publicKey)
+            val privateKeyBytes = Base64.decode(credential.privateKey)
+            val factory = KeyFactory.getInstance("EC")
+            val publicKey = factory.generatePublic(X509EncodedKeySpec(publicKeyBytes))
+            val privateKey = factory.generatePrivate(PKCS8EncodedKeySpec(privateKeyBytes))
+            return KeyPair(publicKey, privateKey)
+        }
+        return null
+    }
+    override fun getKeyPair(context: Context): KeyPair{
+        return getKeyPair(context, generateCredentialId())
+    }
+    override fun getKeyPair(context:Context, credentialId: ByteArray): KeyPair {
+        Log.d(TAG, "getKeyPair($context, $credentialId)")
+        val savedKeyPair = getKeyPairFromDatabase(context, credentialId)
+        if (savedKeyPair != null) {
+            return savedKeyPair
+        }
         generator.initialize(ECGenParameterSpec("secp256r1"))
         return generator.generateKeyPair()
-    }
-    override fun getKeyPair(fragment: Fragment): KeyPair {
-        Log.d(TAG, "getKeyPair($fragment)")
-        return getKeyPair(fragment.requireContext())
-    }
-    @OptIn(ExperimentalEncodingApi::class)
-    override fun getKeyPair(context: Context): KeyPair {
-        Log.d(TAG, "getKeyPair($context)")
-        val sharedPref = context.getSharedPreferences(SHARED_PREFERENCE, Context.MODE_PRIVATE)
-        val publicKeyPref = sharedPref.getString(CREDENTIAL_PREFERENCE_PUBLICKEY, null)
-        val privateKeyPref = sharedPref.getString(CREDENTIAL_PREFERENCE_PRIVATEKEY, null)
-
-
-        return if(publicKeyPref === null || privateKeyPref === null){
-            val keyPair = getKeyPair()
-            // TODO: Find a more secure storage
-            // Save to preferences, this is very insecure!!
-            with (sharedPref.edit()){
-                putString(CREDENTIAL_PREFERENCE_PUBLICKEY, Base64.encode(keyPair.public.encoded))
-                putString(CREDENTIAL_PREFERENCE_PRIVATEKEY, Base64.encode(keyPair.private.encoded))
-                apply()
-            }
-            keyPair
-        } else {
-            getKeyPair(publicKeyPref, privateKeyPref)
-        }
-    }
-    @OptIn(ExperimentalEncodingApi::class)
-    override fun getKeyPair(publicKey: String, privateKey: String): KeyPair {
-        Log.d(TAG, "getKeyPair($publicKey, $privateKey)")
-        val publicKeyBytes = Base64.decode(publicKey)
-        val privateKeyBytes = Base64.decode(privateKey)
-        val publicKeySpec = KeyFactory.getInstance(KEY_ALGO).generatePublic(X509EncodedKeySpec(publicKeyBytes))
-        val privateKeySpec = KeyFactory.getInstance(KEY_ALGO).generatePrivate(PKCS8EncodedKeySpec(privateKeyBytes))
-        return KeyPair(publicKeySpec, privateKeySpec)
     }
     @OptIn(ExperimentalEncodingApi::class)
     override fun appInfoToOrigin(info: CallingAppInfo): String {
         val cert = info.signingInfo.apkContentsSigners[0].toByteArray()
-        val md = MessageDigest.getInstance("SHA-256");
+        val md = MessageDigest.getInstance("SHA-256")
         val certHash = md.digest(cert)
         // This is the format for origin
         return "android:apk-key-hash:${Base64.encode(certHash)}"

@@ -6,11 +6,11 @@ import android.os.Bundle
 import android.util.Log
 import androidx.activity.viewModels
 import androidx.credentials.provider.PendingIntentHandler
-import foundation.algorand.nuauth.credential.CredentialRepository
+import androidx.lifecycle.lifecycleScope
 import foundation.algorand.nuauth.databinding.ActivityGetPasskeyBinding
+import kotlinx.coroutines.launch
 
 class GetPasskeyActivity : AppCompatActivity() {
-    private val credentialRepository: CredentialRepository = CredentialRepository()
     private lateinit var binding: ActivityGetPasskeyBinding
     val viewModel: GetPasskeyViewModel by viewModels()
     companion object {
@@ -19,8 +19,7 @@ class GetPasskeyActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Log.d(TAG, "onCreate($intent)")
-        val keyPair = credentialRepository.getKeyPair(this@GetPasskeyActivity)
-        Log.d(CreatePasskeyActivity.TAG, "${keyPair.public}")
+
         // Initialize Layout
         binding = ActivityGetPasskeyBinding.inflate(layoutInflater)
         setContentView(binding.root)
@@ -29,10 +28,12 @@ class GetPasskeyActivity : AppCompatActivity() {
         // Handle Intent
         val request = PendingIntentHandler.retrieveProviderGetCredentialRequest(intent)
         if (request != null) {
-            val result = viewModel.processGetPasskey(request, intent.getBundleExtra("CREDENTIAL_DATA"))
-            Log.d(TAG, "result: $result")
-            setResult(Activity.RESULT_OK, result)
-            finish()
+            lifecycleScope.launch {
+                val result = viewModel.processGetPasskey(this@GetPasskeyActivity, request, intent.getBundleExtra("CREDENTIAL_DATA"))
+                Log.d(TAG, "result: $result")
+                setResult(Activity.RESULT_OK, result)
+                finish()
+            }
         } else {
             binding.getPasskeyMessage.text = resources.getString(R.string.get_passkey_error)
         }

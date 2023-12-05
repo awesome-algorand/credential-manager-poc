@@ -11,22 +11,20 @@ import androidx.credentials.provider.ProviderCreateCredentialRequest
 import androidx.credentials.webauthn.AuthenticatorAttestationResponse
 import androidx.credentials.webauthn.FidoPublicKeyCredential
 import androidx.credentials.webauthn.PublicKeyCredentialCreationOptions
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.ViewModel
+import androidx.lifecycle.*
 import foundation.algorand.nuauth.credential.CredentialRepository
+import foundation.algorand.nuauth.credential.db.Credential
+import kotlinx.coroutines.launch
 import org.json.JSONObject
 import java.math.BigInteger
 import java.security.KeyPair
-import java.security.KeyPairGenerator
-import java.security.SecureRandom
 import java.security.interfaces.ECPublicKey
-import java.security.spec.ECGenParameterSpec
 import java.security.spec.ECPoint
+import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 
 
-class CreatePasskeyViewModel: ViewModel() {
+class CreatePasskeyViewModel(): ViewModel() {
     private val credentialRepository = CredentialRepository()
     companion object {
         const val TAG = "CreatePasskeyViewModel"
@@ -104,7 +102,6 @@ class CreatePasskeyViewModel: ViewModel() {
         return ba.copyOfRange(ba.size - 32, ba.size)
 
     }
-
     @SuppressLint("RestrictedApi")
     @OptIn(ExperimentalEncodingApi::class)
     private fun handleCreatePasskey(context: Context, request: ProviderCreateCredentialRequest): Intent {
@@ -114,15 +111,26 @@ class CreatePasskeyViewModel: ViewModel() {
         val requestOptions = PublicKeyCredentialCreationOptions(publicKeyRequest.requestJson)
 
         // Generate a credentialId
-        val credentialId = ByteArray(32)
-        SecureRandom().nextBytes(credentialId)
+        val credentialId = credentialRepository.generateCredentialId()
         // Generate a credential key pair
-        val spec = ECGenParameterSpec("secp256r1")
-        val keyPairGen = KeyPairGenerator.getInstance("EC")
-        keyPairGen.initialize(spec)
-        val keyPair = keyPairGen.genKeyPair()
+        val keyPair = credentialRepository.getKeyPair(context, credentialId)
+
+        val name = JSONObject(publicKeyRequest.requestJson).getJSONObject("user").get("name").toString()
 
         // Save passkey in your database as per your own implementation
+        viewModelScope.launch {
+            credentialRepository.saveCredential(
+                context,
+                Credential(
+                    credentialId = Base64.encode(credentialId),
+                    userHandle = name,
+                    origin = request.callingAppInfo.origin!!,
+                    publicKey = Base64.encode(keyPair.public.encoded),
+                    privateKey = Base64.encode(keyPair.private.encoded),
+                    count = 0,
+                )
+            )
+        }
 
         // Create AuthenticatorAttestationResponse object to pass to
         // FidoPublicKeyCredential
