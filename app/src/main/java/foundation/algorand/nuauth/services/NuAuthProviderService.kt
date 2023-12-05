@@ -3,10 +3,12 @@ package foundation.algorand.nuauth.services
 import android.app.PendingIntent
 import android.content.Intent
 import android.graphics.drawable.Icon
+import android.os.Build
 import android.os.Bundle
 import android.os.OutcomeReceiver
 import android.os.CancellationSignal
 import android.util.Log
+import androidx.annotation.RequiresApi
 import androidx.credentials.exceptions.ClearCredentialException
 import androidx.credentials.exceptions.CreateCredentialException
 import androidx.credentials.exceptions.CreateCredentialUnknownException
@@ -23,11 +25,17 @@ import androidx.credentials.provider.CredentialProviderService
 import androidx.credentials.provider.ProviderClearCredentialStateRequest
 import androidx.credentials.provider.PublicKeyCredentialEntry
 import foundation.algorand.nuauth.R
+import foundation.algorand.nuauth.credential.CredentialRepository
+import foundation.algorand.nuauth.credential.db.Credential
+import kotlinx.coroutines.*
 import org.json.JSONObject
 
 class NuAuthProviderService: CredentialProviderService() {
+    private val credentialRepository = CredentialRepository()
+    private val job = SupervisorJob()
+    private val scope = CoroutineScope(Dispatchers.IO + job)
+
     companion object {
-        const val FAKE_USERNAME = "bob"
         const val TAG = "NuAuthProviderService"
         //TODO: App Lock Intents
         const val GET_PASSKEY_INTENT = 1
@@ -35,10 +43,10 @@ class NuAuthProviderService: CredentialProviderService() {
         const val GET_PASSKEY_ACTION = "foundation.algorand.nuauth.GET_PASSKEY"
         const val CREATE_PASSKEY_ACTION = "foundation.algorand.nuauth.CREATE_PASSKEY"
     }
-
     /**
      * Handle Create Credential Requests
      */
+    @RequiresApi(Build.VERSION_CODES.S)
     override fun onBeginCreateCredentialRequest(
         request: BeginCreateCredentialRequest,
         cancellationSignal: CancellationSignal,
@@ -89,6 +97,7 @@ class NuAuthProviderService: CredentialProviderService() {
     /**
      * Handle Get Credential Requests
      */
+    @RequiresApi(Build.VERSION_CODES.S)
     override fun onBeginGetCredentialRequest(
         request: BeginGetCredentialRequest,
         cancellationSignal: CancellationSignal,
@@ -106,21 +115,26 @@ class NuAuthProviderService: CredentialProviderService() {
      */
     private fun processGetCredentialRequest(request: BeginGetCredentialRequest): BeginGetCredentialResponse{
         Log.v(TAG, "processing GetCredentialRequest")
-        val data = Bundle()
-        data.putString("credId", "c0zfeC3NVA4Nh3tq79k8Ow")
-        // TODO: Manage PublicKeyCredentials in a secure storage
-        val fakeKey = PublicKeyCredentialEntry.Builder(
-            this@NuAuthProviderService,
-            FAKE_USERNAME,
-            createNewPendingIntent(GET_PASSKEY_ACTION, GET_PASSKEY_INTENT, data),
-            // TODO: filter the request for PublicKeyCredentialOptions
-            request.beginGetCredentialOptions[0] as BeginGetPublicKeyCredentialOption
-        )
-            .setIcon(Icon.createWithResource(this@NuAuthProviderService, R.mipmap.ic_launcher))
-            .build()
-        Log.v(TAG, "created fake key with $FAKE_USERNAME")
-        // Return the Response with list of available Keys
-        return BeginGetCredentialResponse(listOf(fakeKey))
+        val deferredCredentials: Deferred<List<Credential>> = scope.async {
+            credentialRepository.getDatabase(this@NuAuthProviderService).credentialDao().getAllRegular()
+        }
+        val credentials = runBlocking {
+            deferredCredentials.await()
+        }
+        return BeginGetCredentialResponse(credentials.map {
+            val data = Bundle()
+            data.putString("credentialId", it.credentialId)
+            data.putString("userHandle", it.userHandle)
+            PublicKeyCredentialEntry.Builder(
+                this@NuAuthProviderService,
+                it.userHandle,
+                createNewPendingIntent(GET_PASSKEY_ACTION, GET_PASSKEY_INTENT, data),
+                // TODO: filter the request for PublicKeyCredentialOptions
+                request.beginGetCredentialOptions[0] as BeginGetPublicKeyCredentialOption
+            )
+                .setIcon(Icon.createWithResource(this@NuAuthProviderService, R.mipmap.ic_launcher))
+                .build()
+        })
     }
     override fun onClearCredentialStateRequest(
         request: ProviderClearCredentialStateRequest,
@@ -140,5 +154,9 @@ class NuAuthProviderService: CredentialProviderService() {
             applicationContext, requestCode,
             intent, (PendingIntent.FLAG_MUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
         )
+    }
+    override fun onDestroy() {
+        super.onDestroy()
+        job.cancel()
     }
 }
