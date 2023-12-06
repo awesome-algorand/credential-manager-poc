@@ -15,6 +15,7 @@ import androidx.credentials.webauthn.FidoPublicKeyCredential
 import androidx.credentials.webauthn.PublicKeyCredentialCreationOptions
 import androidx.lifecycle.*
 import foundation.algorand.nuauth.credential.CredentialRepository
+import foundation.algorand.nuauth.credential.WebAuthnUtils
 import foundation.algorand.nuauth.credential.db.Credential
 import kotlinx.coroutines.launch
 import org.json.JSONObject
@@ -22,7 +23,6 @@ import java.math.BigInteger
 import java.security.KeyPair
 import java.security.interfaces.ECPublicKey
 import java.security.spec.ECPoint
-import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 
 
@@ -126,11 +126,11 @@ class CreatePasskeyViewModel(): ViewModel() {
             credentialRepository.saveCredential(
                 context,
                 Credential(
-                    credentialId = Base64.encode(credentialId),
+                    credentialId = WebAuthnUtils.b64Encode(credentialId),
                     userHandle = name,
                     origin = request.callingAppInfo.origin!!,
-                    publicKey = Base64.encode(keyPair.public.encoded),
-                    privateKey = Base64.encode(keyPair.private.encoded),
+                    publicKey = WebAuthnUtils.b64Encode(keyPair.public.encoded),
+                    privateKey = WebAuthnUtils.b64Encode(keyPair.private.encoded),
                     count = 0,
                 )
             )
@@ -145,7 +145,7 @@ class CreatePasskeyViewModel(): ViewModel() {
             credentialPublicKey = getPublicKeyFromKeyPair(keyPair),
             origin = credentialRepository.appInfoToOrigin(request.callingAppInfo),
             up = true,
-            uv = true,
+            uv = false,
             be = true,
             bs = true,
             packageName = request.callingAppInfo.packageName
