@@ -14,8 +14,9 @@
  * limitations under the License.
  */
 
-package foundation.algorand.nuauth.credential
+package foundation.algorand.nuauth.webauthn
 
+import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.annotation.RestrictTo
 import androidx.credentials.provider.CallingAppInfo
@@ -26,6 +27,10 @@ import java.security.MessageDigest
 internal class WebAuthnUtilsApi28 {
     companion object {
         fun appInfoToOrigin(info: CallingAppInfo): String {
+            if(info.isOriginPopulated()){
+                return info.origin!!
+            }
+            Log.d("WebAuthnUtilsApi28", "appInfoToOrigin(${info.isOriginPopulated()})")
             val cert = info.signingInfo.apkContentsSigners[0].toByteArray()
             val md = MessageDigest.getInstance("SHA-256")
             val certHash = md.digest(cert)

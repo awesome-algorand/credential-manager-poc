@@ -27,9 +27,10 @@ class MainActivity : AppCompatActivity() {
             credentials.collect() { credentialList ->
                 Log.d(TAG, "db: $credentialList")
                 val stuff = credentialList.map {
+                    val id = it.credentialId
                     val user = it.userHandle
                     val origin = it.origin
-                    "$user@$origin"
+                    "$id at $user@$origin"
                 }
                 val listView = findViewById<ListView>(R.id.listView)
                 val adapter: ArrayAdapter<*> = ArrayAdapter<String>(this@MainActivity, android.R.layout.simple_list_item_1,  android.R.id.text1, stuff)
@@ -38,6 +39,11 @@ class MainActivity : AppCompatActivity() {
         }
 
         binding = ActivityMainBinding.inflate(layoutInflater)
+        binding.clearButton.setOnClickListener {
+            lifecycleScope.launch {
+                db.credentialDao().deleteAll()
+            }
+        }
         setContentView(binding.root)
 
 

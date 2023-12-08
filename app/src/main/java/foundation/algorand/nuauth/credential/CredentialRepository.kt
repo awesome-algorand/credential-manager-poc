@@ -3,13 +3,13 @@ package foundation.algorand.nuauth.credential
 import android.content.Context
 import android.security.keystore.KeyProperties
 import android.util.Log
-import androidx.credentials.provider.CallingAppInfo
 import foundation.algorand.nuauth.credential.db.Credential
 import foundation.algorand.nuauth.credential.db.CredentialDatabase
+import foundation.algorand.nuauth.webauthn.WebAuthnUtils
+import java.math.BigInteger
 import java.security.*
+import java.security.interfaces.ECPublicKey
 import java.security.spec.*
-import kotlin.io.encoding.Base64
-import kotlin.io.encoding.ExperimentalEncodingApi
 
 
 interface CredentialRepository {
@@ -20,7 +20,8 @@ interface CredentialRepository {
     fun generateCredentialId(): ByteArray
     fun getKeyPair(context: Context): KeyPair
     fun getKeyPair(context: Context, credentialId: ByteArray): KeyPair
-    fun appInfoToOrigin(info: CallingAppInfo): String
+
+    fun getPublicKeyFromKeyPair(keyPair: KeyPair?): ByteArray
 }
 fun CredentialRepository(): CredentialRepository = Repository()
 class Repository(): CredentialRepository {
@@ -51,14 +52,13 @@ class Repository(): CredentialRepository {
         SecureRandom().nextBytes(credentialId)
         return credentialId
     }
-    @OptIn(ExperimentalEncodingApi::class)
     fun getKeyPairFromDatabase(context: Context, credentialId: ByteArray): KeyPair? {
         Log.d(TAG, "getKeyPairFromDatabase()")
         getDatabase(context)
-        val credential = db.credentialDao().findById(Base64.encode(credentialId))
+        val credential = db.credentialDao().findById(WebAuthnUtils.b64Encode(credentialId))
         if (credential != null) {
-            val publicKeyBytes = Base64.decode(credential.publicKey)
-            val privateKeyBytes = Base64.decode(credential.privateKey)
+            val publicKeyBytes = WebAuthnUtils.b64Decode(credential.publicKey)
+            val privateKeyBytes = WebAuthnUtils.b64Decode(credential.privateKey)
             val factory = KeyFactory.getInstance("EC")
             val publicKey = factory.generatePublic(X509EncodedKeySpec(publicKeyBytes))
             val privateKey = factory.generatePrivate(PKCS8EncodedKeySpec(privateKeyBytes))
@@ -78,12 +78,38 @@ class Repository(): CredentialRepository {
         generator.initialize(ECGenParameterSpec("secp256r1"))
         return generator.generateKeyPair()
     }
-    @OptIn(ExperimentalEncodingApi::class)
-    override fun appInfoToOrigin(info: CallingAppInfo): String {
-        val cert = info.signingInfo.apkContentsSigners[0].toByteArray()
-        val md = MessageDigest.getInstance("SHA-256")
-        val certHash = md.digest(cert)
-        // This is the format for origin
-        return "android:apk-key-hash:${Base64.encode(certHash)}"
+
+
+    /**
+     * Thank you https://developers.kddi.com/blog/2esxXGTcSBSaGLTJO0dC67
+     */
+    override fun getPublicKeyFromKeyPair(keyPair: KeyPair?): ByteArray {
+        // credentialPublicKey CBOR
+        if (keyPair==null) return ByteArray(0)
+        if (keyPair.public !is ECPublicKey) return ByteArray(0)
+
+        val ecPubKey = keyPair.public as ECPublicKey
+        val ecPoint: ECPoint = ecPubKey.w
+
+        // for now, only covers ES256
+        if (ecPoint.affineX.bitLength() > 256 || ecPoint.affineY.bitLength() > 256) return ByteArray(0)
+
+        val byteX = bigIntToByteArray32(ecPoint.affineX)
+        val byteY = bigIntToByteArray32(ecPoint.affineY)
+
+        // refer to RFC9052 Section 7 for details
+        return "A5010203262001215820".chunked(2).map { it.toInt(16).toByte() }.toByteArray() + byteX+ "225820".chunked(2).map { it.toInt(16).toByte() }.toByteArray() + byteY
+
+    }
+    private fun bigIntToByteArray32(bigInteger: BigInteger):ByteArray{
+        var ba = bigInteger.toByteArray()
+
+        if(ba.size < 32) {
+            // append zeros in front
+            ba = ByteArray(32) + ba
+        }
+        // get the last 32 bytes as bigint conversion sometimes put extra zeros at front
+        return ba.copyOfRange(ba.size - 32, ba.size)
+
     }
 }

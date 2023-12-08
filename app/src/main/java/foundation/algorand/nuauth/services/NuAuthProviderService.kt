@@ -47,7 +47,6 @@ class NuAuthProviderService: CredentialProviderService() {
     /**
      * Handle Create Credential Requests
      */
-    @RequiresApi(Build.VERSION_CODES.S)
     override fun onBeginCreateCredentialRequest(
         request: BeginCreateCredentialRequest,
         cancellationSignal: CancellationSignal,

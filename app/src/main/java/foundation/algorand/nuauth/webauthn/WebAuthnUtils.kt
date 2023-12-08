@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package foundation.algorand.nuauth.credential
+package foundation.algorand.nuauth.webauthn
 
 import android.os.Build
 import android.util.Base64
@@ -36,7 +36,7 @@ internal class WebAuthnUtils {
             if (Build.VERSION.SDK_INT >= 28) {
                 return WebAuthnUtilsApi28.appInfoToOrigin(info)
             }
-            return ""
+            return WebAuthnUtilsApiCustom.appInfoToOrigin(info)
         }
     }
 }

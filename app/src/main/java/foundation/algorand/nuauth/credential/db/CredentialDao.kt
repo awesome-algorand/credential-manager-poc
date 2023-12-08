@@ -25,4 +25,6 @@ interface CredentialDao {
 
     @Delete
     fun delete(credential: Credential)
+    @Query("DELETE FROM credential")
+    fun deleteAll()
 }
