@@ -1,6 +1,7 @@
 package foundation.algorand.nuauth.credential
 
 import android.content.Context
+import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.Log
 import foundation.algorand.nuauth.credential.db.Credential
@@ -26,7 +27,7 @@ interface CredentialRepository {
 fun CredentialRepository(): CredentialRepository = Repository()
 class Repository(): CredentialRepository {
     override var keyStore: KeyStore = KeyStore.getInstance("AndroidKeyStore")
-    private var generator: KeyPairGenerator = KeyPairGenerator.getInstance(KeyProperties.KEY_ALGORITHM_EC)
+    private var generator: KeyPairGenerator = KeyPairGenerator.getInstance(KeyProperties.KEY_ALGORITHM_EC, "AndroidKeyStore")
     override lateinit var db: CredentialDatabase
     init {
         keyStore.load(null)
@@ -66,19 +67,39 @@ class Repository(): CredentialRepository {
         }
         return null
     }
+
+    private fun getKeyPairFromKeyStore(credentialId: ByteArray): KeyPair? {
+        Log.d(TAG, "getKeyPairFromKeyStore() ${keyStore.aliases()}}")
+        return try {
+            val privateKeyEntry = keyStore.getEntry(WebAuthnUtils.b64Encode(credentialId), null) as KeyStore.PrivateKeyEntry
+            KeyPair(privateKeyEntry.certificate.publicKey, privateKeyEntry.privateKey)
+        } catch (e: Exception) {
+            Log.e(TAG, "getKeyPairFromKeyStore() failed", e)
+            null
+        }
+
+    }
     override fun getKeyPair(context: Context): KeyPair{
         return getKeyPair(context, generateCredentialId())
     }
     override fun getKeyPair(context:Context, credentialId: ByteArray): KeyPair {
         Log.d(TAG, "getKeyPair($context, $credentialId)")
-        val savedKeyPair = getKeyPairFromDatabase(context, credentialId)
+        val savedKeyPair = getKeyPairFromKeyStore(credentialId)
         if (savedKeyPair != null) {
             return savedKeyPair
         }
-        generator.initialize(ECGenParameterSpec("secp256r1"))
+        val parameterSpec = KeyGenParameterSpec.Builder(
+            WebAuthnUtils.b64Encode(credentialId),
+            KeyProperties.PURPOSE_SIGN or KeyProperties.PURPOSE_VERIFY
+        ).run {
+            setAlgorithmParameterSpec(ECGenParameterSpec("secp256r1"))
+            setDigests(KeyProperties.DIGEST_SHA256, KeyProperties.DIGEST_SHA512)
+            build()
+        }
+
+        generator.initialize(parameterSpec)
         return generator.generateKeyPair()
     }
-
 
     /**
      * Thank you https://developers.kddi.com/blog/2esxXGTcSBSaGLTJO0dC67

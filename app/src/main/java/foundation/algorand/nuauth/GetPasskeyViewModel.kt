@@ -76,6 +76,7 @@ class GetPasskeyViewModel: ViewModel() {
         Log.d(TAG, "handleGetPasskey($request, $requestInfo)")
         val option = request.credentialOptions[0] as GetPublicKeyCredentialOption
         val requestOptions = PublicKeyCredentialRequestOptions(option.requestJson)
+        Log.d(TAG, "requestOptions: ${option.requestJson}")
         val credIdEnc = requestInfo!!.getString("credentialId")
         Log.d(TAG, "credIdEnc: $credIdEnc")
         val credId = WebAuthnUtils.b64Decode(credIdEnc!!)
@@ -88,8 +89,8 @@ class GetPasskeyViewModel: ViewModel() {
         val response = AuthenticatorAssertionResponse(
             requestOptions = requestOptions,
             credentialId = credId,
-            origin = WebAuthnUtils.appInfoToOrigin(request.callingAppInfo),
-//            origin = "webauthn.io",
+//            origin = WebAuthnUtils.appInfoToOrigin(request.callingAppInfo),
+            origin = "webauthn.io",
             up = true,
             uv = false,
             be = false,
@@ -104,12 +105,12 @@ class GetPasskeyViewModel: ViewModel() {
 
         //TODO: Fix signature issues
         val sig = Signature.getInstance("SHA256withECDSA")
-        sig.initSign(keyPair.private as ECPrivateKey )
+        sig.initSign(keyPair.private )
         sig.update(response.dataToSign())
         response.signature = sig.sign()
         Log.d(TAG, "signature: ${response.signature.contentToString()}")
         val credential = FidoPublicKeyCredential(
-            rawId = credId, response = response, authenticatorAttachment = "cross-platform"
+            rawId = credId, response = response, authenticatorAttachment = "platform"
         )
         Log.d(TAG, credential.toString())
         val result = Intent()
